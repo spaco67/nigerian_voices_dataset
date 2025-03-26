@@ -7,7 +7,7 @@ export async function updateRecordingStatus(id: string, status: string) {
       throw new Error('Invalid recording ID format');
     }
 
-    const result = await db.recording.update({
+    const result = await db.recordings.update({
       where: {
         id: id,
       },
@@ -25,7 +25,7 @@ export async function updateRecordingStatus(id: string, status: string) {
 }
 
 export async function getRecordingsByLanguage(languageId: string) {
-  return db.recording.findMany({
+  return db.recordings.findMany({
     where: {
       languageId,
       status: 'approved',
@@ -37,7 +37,7 @@ export async function getRecordingsByLanguage(languageId: string) {
 }
 
 export async function getPendingRecordings() {
-  return db.recording.findMany({
+  return db.recordings.findMany({
     where: {
       status: 'pending',
     },
@@ -48,11 +48,20 @@ export async function getPendingRecordings() {
 }
 
 export async function createRecording(data: any) {
-  return db.recording.create({
+  return db.recordings.create({
     data: {
       ...data,
       validations: 0,
       positiveValidations: 0,
+      duration: 0,
+      sampleRate: 44100,
+      category: 'general',
+      metadata: {
+        device: 'web',
+        isGuest: false,
+      },
+      createdAt: new Date(),
+      updatedAt: new Date(),
     },
   });
 }

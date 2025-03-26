@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { generatePhrases } from '@/lib/services/openai';
+import { languages } from '@/lib/languages';
 
 export async function GET(request: Request) {
   try {
@@ -13,7 +14,17 @@ export async function GET(request: Request) {
       );
     }
 
+    const language = languages.find(l => l.id === languageId);
+    if (!language) {
+      return NextResponse.json(
+        { error: 'Invalid language ID' },
+        { status: 400 }
+      );
+    }
+
+    console.log(`Generating phrases for language: ${language.name}`);
     const phrases = await generatePhrases(languageId);
+    
     return NextResponse.json(phrases);
   } catch (error) {
     console.error('Phrase generation error:', error);

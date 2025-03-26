@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
-import { authOptions } from '../../auth/[...nextauth]/route';
+import { authOptions } from '@/lib/auth';
 import { getDb } from '@/lib/db/mongodb';
+import { ObjectId } from 'mongodb';
 
 export async function GET() {
   try {
@@ -20,6 +21,7 @@ export async function GET() {
       .sort({ createdAt: -1 })
       .toArray();
 
+    console.log(`Found ${validations.length} validations for user ${session.user.id}`);
     return NextResponse.json(validations);
   } catch (error) {
     console.error('Error fetching validations:', error);

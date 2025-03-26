@@ -1,18 +1,18 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { VoiceRecorder } from './VoiceRecorder';
-import { Card } from './ui/card';
-import { Button } from './ui/button';
-import { Loader2, ChevronLeft, ChevronRight } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
-import { Progress } from './ui/progress';
-import { languages } from '@/lib/languages';
+import { useState, useEffect } from "react";
+import { VoiceRecorder } from "./VoiceRecorder";
+import { Card } from "./ui/card";
+import { Button } from "./ui/button";
+import { Loader2, ChevronLeft, ChevronRight } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { Progress } from "./ui/progress";
+import { languages } from "@/lib/languages";
+import { CelebrationModal } from "./CelebrationModal";
+import { TranslatedPhrase, PhraseCategory } from "@/lib/types";
 
-interface Phrase {
-  english: string;
-  translated: string;
-  context?: string;
+interface Phrase extends TranslatedPhrase {
+  category: PhraseCategory;
 }
 
 interface RecordingSessionProps {
@@ -20,13 +20,20 @@ interface RecordingSessionProps {
   onComplete?: () => void;
 }
 
-export function RecordingSession({ languageId, onComplete }: RecordingSessionProps) {
+export function RecordingSession({
+  languageId,
+  onComplete,
+}: RecordingSessionProps) {
   const [phrases, setPhrases] = useState<Phrase[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
-  const [recordings, setRecordings] = useState<{ phrase: Phrase; audioUrl: string }[]>([]);
+  const [recordings, setRecordings] = useState<
+    { phrase: Phrase; audioUrl: string }[]
+  >([]);
   const { toast } = useToast();
-  const language = languages.find(l => l.id === languageId);
+  const language = languages.find((l) => l.id === languageId);
+  const [showCelebration, setShowCelebration] = useState(false);
+  const [totalRecordings, setTotalRecordings] = useState(0);
 
   useEffect(() => {
     loadPhrases();
@@ -35,14 +42,27 @@ export function RecordingSession({ languageId, onComplete }: RecordingSessionPro
   async function loadPhrases() {
     try {
       setIsLoading(true);
-      const response = await fetch(`/api/phrases/generate?languageId=${languageId}`);
-      if (!response.ok) throw new Error('Failed to load phrases');
+      console.log(`Loading phrases for ${language?.name}...`);
+
+      const response = await fetch(
+        `/api/phrases/generate?languageId=${languageId}`
+      );
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || "Failed to load phrases");
+      }
+
       const data = await response.json();
+      console.log(`Loaded ${data.length} phrases for ${language?.name}`);
       setPhrases(data);
     } catch (error) {
+      console.error("Error loading phrases:", error);
       toast({
         title: "Error",
-        description: "Failed to load phrases. Please try again.",
+        description:
+          error instanceof Error
+            ? error.message
+            : "Failed to load phrases. Please try again.",
         variant: "destructive",
       });
     } finally {
@@ -57,6 +77,13 @@ export function RecordingSession({ languageId, onComplete }: RecordingSessionPro
     };
 
     setRecordings([...recordings, newRecording]);
+    const newTotal = totalRecordings + 1;
+    setTotalRecordings(newTotal);
+
+    // Show celebration every 5 recordings
+    if (newTotal > 0 && newTotal % 5 === 0) {
+      setShowCelebration(true);
+    }
 
     // If this was the last phrase, save all recordings
     if (currentIndex === phrases.length - 1) {
@@ -69,32 +96,55 @@ export function RecordingSession({ languageId, onComplete }: RecordingSessionPro
   async function saveAllRecordings() {
     try {
       setIsLoading(true);
-      const response = await fetch('/api/recordings/batch', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      console.log("Preparing recordings for save:", {
+        languageId,
+        recordings: recordings.map((rec) => ({
+          englishPhrase: rec.phrase.english,
+          translatedPhrase: rec.phrase.translated,
+          audioUrl: rec.audioUrl,
+        })),
+      });
+
+      const response = await fetch("/api/recordings/batch", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           languageId,
-          recordings: recordings.map(rec => ({
+          recordings: recordings.map((rec) => ({
             englishPhrase: rec.phrase.english,
             translatedPhrase: rec.phrase.translated,
             audioUrl: rec.audioUrl,
-            context: rec.phrase.context,
           })),
         }),
       });
 
-      if (!response.ok) throw new Error('Failed to save recordings');
+      if (!response.ok) {
+        const error = await response.json();
+        console.error("Save response error:", error);
+        throw new Error(error.error || "Failed to save recordings");
+      }
+
+      const data = await response.json();
+      console.log("Save response:", data);
+
+      if (!data.success) {
+        throw new Error("Failed to save recordings");
+      }
 
       toast({
         title: "Success",
-        description: "All recordings have been saved successfully!",
+        description: `All recordings have been saved successfully! You earned ${data.points} points.`,
       });
 
       onComplete?.();
     } catch (error) {
+      console.error("Save error:", error);
       toast({
         title: "Error",
-        description: "Failed to save recordings. Please try again.",
+        description:
+          error instanceof Error
+            ? error.message
+            : "Failed to save recordings. Please try again.",
         variant: "destructive",
       });
     } finally {
@@ -126,9 +176,14 @@ export function RecordingSession({ languageId, onComplete }: RecordingSessionPro
 
   return (
     <div className="space-y-6">
-      <Card className="p-6">
-        <div className="space-y-6">
-          <div className="flex justify-between items-center">
+      <CelebrationModal
+        isOpen={showCelebration}
+        onClose={() => setShowCelebration(false)}
+        recordingsCount={totalRecordings}
+      />
+      <Card className="p-8">
+        <div className="space-y-8">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <div>
               <h2 className="text-2xl font-bold">{language?.name}</h2>
               <p className="text-muted-foreground">
@@ -145,19 +200,23 @@ export function RecordingSession({ languageId, onComplete }: RecordingSessionPro
             </Button>
           </div>
 
-          <Progress 
-            value={(currentIndex / phrases.length) * 100} 
+          <Progress
+            value={(currentIndex / phrases.length) * 100}
             className="h-2"
           />
 
-          <VoiceRecorder
-            phrase={phrases[currentIndex]}
-            onRecordingComplete={handleRecordingComplete}
-            onSkip={() => setCurrentIndex(Math.min(currentIndex + 1, phrases.length - 1))}
-            onPrevious={() => setCurrentIndex(Math.max(currentIndex - 1, 0))}
-          />
+          <div className="max-w-2xl mx-auto w-full">
+            <VoiceRecorder
+              phrase={phrases[currentIndex]}
+              onRecordingComplete={handleRecordingComplete}
+              onSkip={() =>
+                setCurrentIndex(Math.min(currentIndex + 1, phrases.length - 1))
+              }
+              onPrevious={() => setCurrentIndex(Math.max(currentIndex - 1, 0))}
+            />
+          </div>
 
-          <div className="flex justify-between items-center">
+          <div className="flex justify-between items-center pt-4">
             <Button
               variant="outline"
               onClick={() => setCurrentIndex(Math.max(currentIndex - 1, 0))}
@@ -168,7 +227,9 @@ export function RecordingSession({ languageId, onComplete }: RecordingSessionPro
             </Button>
             <Button
               variant="outline"
-              onClick={() => setCurrentIndex(Math.min(currentIndex + 1, phrases.length - 1))}
+              onClick={() =>
+                setCurrentIndex(Math.min(currentIndex + 1, phrases.length - 1))
+              }
               disabled={currentIndex === phrases.length - 1}
             >
               Next
@@ -179,4 +240,4 @@ export function RecordingSession({ languageId, onComplete }: RecordingSessionPro
       </Card>
     </div>
   );
-} 
+}

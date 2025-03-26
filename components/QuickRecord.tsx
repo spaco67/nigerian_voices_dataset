@@ -9,11 +9,11 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
-import { Globe, ChevronDown } from "lucide-react";
+import { Mic, ChevronDown } from "lucide-react";
 import { languages } from "@/lib/languages";
 import { useRouter } from "next/navigation";
 
-export function LanguageSelector() {
+export function QuickRecord() {
   const router = useRouter();
 
   // Group languages by region for better organization
@@ -28,13 +28,13 @@ export function LanguageSelector() {
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" size="sm" className="gap-2">
-          <Globe className="h-4 w-4" />
-          Select Language
+          <Mic className="h-4 w-4 text-red-500" />
+          Record Voice
           <ChevronDown className="h-4 w-4 opacity-50" />
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-[200px]">
-        <DropdownMenuLabel>Nigerian Languages</DropdownMenuLabel>
+      <DropdownMenuContent align="start" className="w-[200px]">
+        <DropdownMenuLabel>Quick Record</DropdownMenuLabel>
         <DropdownMenuSeparator />
         {Object.entries(groupedLanguages).map(([region, langs]) => (
           <div key={region}>
@@ -44,7 +44,7 @@ export function LanguageSelector() {
             {langs.map((lang) => (
               <DropdownMenuItem
                 key={lang.id}
-                onClick={() => router.push(`/contribute/${lang.id}`)}
+                onClick={() => router.push(`/record/${lang.id}`)}
                 className="cursor-pointer"
               >
                 <span>{lang.name}</span>

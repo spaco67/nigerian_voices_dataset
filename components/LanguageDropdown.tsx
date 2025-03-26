@@ -9,17 +9,19 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
-import { Globe, ChevronDown } from "lucide-react";
+import { Languages, ChevronDown } from "lucide-react";
 import { languages } from "@/lib/languages";
 import { useRouter } from "next/navigation";
 
-export function LanguageSelector() {
+export function LanguageDropdown() {
   const router = useRouter();
 
-  // Group languages by region for better organization
+  // Group languages by region
   const groupedLanguages = languages.reduce((acc, lang) => {
     const region = lang.region || 'Other';
-    if (!acc[region]) acc[region] = [];
+    if (!acc[region]) {
+      acc[region] = [];
+    }
     acc[region].push(lang);
     return acc;
   }, {} as Record<string, typeof languages>);
@@ -27,32 +29,33 @@ export function LanguageSelector() {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="sm" className="gap-2">
-          <Globe className="h-4 w-4" />
-          Select Language
-          <ChevronDown className="h-4 w-4 opacity-50" />
+        <Button variant="outline" className="gap-2">
+          <Languages className="h-4 w-4" />
+          Languages
+          <ChevronDown className="h-4 w-4" />
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-[200px]">
-        <DropdownMenuLabel>Nigerian Languages</DropdownMenuLabel>
+      <DropdownMenuContent align="end" className="w-56">
+        <DropdownMenuLabel>Select Language</DropdownMenuLabel>
         <DropdownMenuSeparator />
         {Object.entries(groupedLanguages).map(([region, langs]) => (
           <div key={region}>
-            <DropdownMenuLabel className="text-xs text-muted-foreground pt-2">
+            <DropdownMenuLabel className="text-xs text-muted-foreground">
               {region}
             </DropdownMenuLabel>
-            {langs.map((lang) => (
+            {langs.map((language) => (
               <DropdownMenuItem
-                key={lang.id}
-                onClick={() => router.push(`/contribute/${lang.id}`)}
+                key={language.id}
                 className="cursor-pointer"
+                onClick={() => router.push(`/languages/${language.id}`)}
               >
-                <span>{lang.name}</span>
+                {language.name}
                 <span className="ml-auto text-xs text-muted-foreground">
-                  {lang.nativeName}
+                  {language.nativeName}
                 </span>
               </DropdownMenuItem>
             ))}
+            <DropdownMenuSeparator />
           </div>
         ))}
       </DropdownMenuContent>
